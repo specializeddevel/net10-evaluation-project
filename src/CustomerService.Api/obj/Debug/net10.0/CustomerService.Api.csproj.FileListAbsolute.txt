@@ -31,3 +31,4 @@ C:\Users\RaulBurgos\source\repos\dotnet-course\src\CustomerService.Api\obj\Debug
 C:\Users\RaulBurgos\source\repos\dotnet-course\src\CustomerService.Api\obj\Debug\net10.0\CustomerService.Api.pdb
 C:\Users\RaulBurgos\source\repos\dotnet-course\src\CustomerService.Api\obj\Debug\net10.0\CustomerService.Api.genruntimeconfig.cache
 C:\Users\RaulBurgos\source\repos\dotnet-course\src\CustomerService.Api\obj\Debug\net10.0\ref\CustomerService.Api.dll
+C:\Users\RaulBurgos\source\repos\dotnet-course\src\CustomerService.Api\obj\Debug\net10.0\CustomerService.Api.sourcelink.json

@@ -1,6 +1,7 @@
 using CustomerService.Api.Contracts;
 using CustomerService.Api.Models;
 using CustomerService.Api.Mappings;
+using CustomerService.Api.Exceptions;
 
 namespace CustomerService.Api.Services;
 
@@ -32,9 +33,14 @@ public class InMemoryCustomerService : ICustomerService
 
     public Customer Create(CreateCustomerRequest request)
     {
+
+        EnsureUnique(
+            request.Email,
+            request.DocumentNumber);
+
         long id = ++_nextId;
 
-        DateTimeOffset createdAt = DateTime.UtcNow;
+        DateTimeOffset createdAt = DateTimeOffset.UtcNow;
         Customer customer = request.ToModel(id, createdAt);
 
         _customers.Add(customer);
@@ -64,6 +70,11 @@ public class InMemoryCustomerService : ICustomerService
             return null;
         }
 
+        EnsureUnique(
+        request.Email,
+        request.DocumentNumber,
+        id);
+
         request.ApplyTo(
             customer,
             DateTimeOffset.UtcNow);
@@ -76,6 +87,39 @@ public class InMemoryCustomerService : ICustomerService
         Customer? customer = GetById(id);
 
         return customer is not null && _customers.Remove(customer);
+    }
+
+
+    private void EnsureUnique(
+        string email,
+        string documentNumber,
+        long? excludedCustomerId = null)
+    {
+        bool emailExists = _customers.Any(customer =>
+            (!excludedCustomerId.HasValue
+                || customer.Id != excludedCustomerId.Value)
+            && string.Equals(
+                customer.Email.Trim(),
+                email.Trim(),
+                StringComparison.OrdinalIgnoreCase));
+
+        if (emailExists)
+        {
+            throw new DuplicateCustomerEmailException();
+        }
+
+        bool documentExists = _customers.Any(customer =>
+            (!excludedCustomerId.HasValue
+                || customer.Id != excludedCustomerId.Value)
+            && string.Equals(
+                customer.DocumentNumber.Trim(),
+                documentNumber.Trim(),
+                StringComparison.OrdinalIgnoreCase));
+
+        if (documentExists)
+        {
+            throw new DuplicateCustomerDocumentException();
+        }
     }
 
 }

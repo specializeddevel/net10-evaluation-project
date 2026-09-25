@@ -20,6 +20,8 @@ public class CustomersController : ControllerBase
     [HttpGet]
     [ProducesResponseType<IReadOnlyCollection<CustomerResponse>>(
         StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status500InternalServerError)]
     public ActionResult<IReadOnlyCollection<CustomerResponse>> GetAll()
     {
         CustomerResponse[] response = _customerService
@@ -31,9 +33,13 @@ public class CustomersController : ControllerBase
     }
 
     [HttpGet("{id:long}")]
-    [ProducesResponseType<CustomerResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public ActionResult<CustomerResponse> GetById(int id)
+    [ProducesResponseType<CustomerResponse>(
+        StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status500InternalServerError)]
+    public ActionResult<CustomerResponse> GetById(long id)
     {
         var customer = _customerService.GetById(id);
 
@@ -46,8 +52,14 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType<CustomerResponse>(StatusCodes.Status201Created)]
-    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<CustomerResponse>(
+        StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status409Conflict)]        
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status500InternalServerError)]
     public ActionResult<CustomerResponse> Create(
         CreateCustomerRequest request)
     {
@@ -68,6 +80,10 @@ public class CustomersController : ControllerBase
         StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status500InternalServerError)]
     public ActionResult<CustomerResponse> Update(
         long id,
         UpdateCustomerRequest request)
@@ -88,6 +104,8 @@ public class CustomersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status500InternalServerError)]
     public IActionResult Delete(long id)
     {
         bool deleted = _customerService.Delete(id);
@@ -99,4 +117,15 @@ public class CustomersController : ControllerBase
 
         return NoContent();
     }
+
+    #if DEBUG
+        [HttpGet("simulate-error")]
+        [ProducesResponseType<ProblemDetails>(
+            StatusCodes.Status500InternalServerError)]
+        public IActionResult SimulateUnexpectedError()
+        {
+            throw new InvalidOperationException(
+                "Simulated unexpected error.");
+        }
+    #endif
 }
