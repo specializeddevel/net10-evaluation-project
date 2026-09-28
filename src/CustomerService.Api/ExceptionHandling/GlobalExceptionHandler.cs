@@ -1,8 +1,8 @@
+using System.Diagnostics;
 using CustomerService.Api.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
 
 namespace CustomerService.Api.ExceptionHandling;
 
@@ -25,7 +25,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         CancellationToken cancellationToken)
     {
 
-        string traceId = 
+        string traceId =
             Activity.Current?.Id
             ?? httpContext.TraceIdentifier;
 
@@ -35,6 +35,19 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
         switch (exception)
         {
+            case CustomerMinimumAgeException minimumAgeException:
+                statusCode = StatusCodes.Status422UnprocessableEntity;
+                title = "Customer policy violation";
+                detail = minimumAgeException.Message;
+
+                _logger.LogWarning(
+                    "Customer minimum age policy rejected request. " +
+                    "MinimumAge: {MinimumAge}, TraceId: {TraceId}, " +
+                    "RequestId: {RequestId}",
+                    minimumAgeException.MinimumAge,
+                    traceId,
+                    httpContext.TraceIdentifier);
+                break;
             case DuplicateCustomerEmailException:
             case DuplicateCustomerDocumentException:
                 statusCode = StatusCodes.Status409Conflict;
@@ -43,7 +56,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
                 _logger.LogWarning(
                     "Customer uniqueness conflict handled. " +
-                    "ExceptionType: {ExceptionType}, TraceId: {TraceId}, " + 
+                    "ExceptionType: {ExceptionType}, TraceId: {TraceId}, " +
                     "RequestId: {RequestId}",
                     exception.GetType().Name,
                     traceId,
@@ -74,7 +87,13 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             Instance = httpContext.Request.Path.Value
         };
 
-            problemDetails.Extensions["traceId"] = traceId;
+        if (exception is CustomerMinimumAgeException ageException)
+        {
+            problemDetails.Extensions["minimumAge"] =
+                ageException.MinimumAge;
+        }
+
+        problemDetails.Extensions["traceId"] = traceId;
 
         httpContext.Response.StatusCode = statusCode;
 

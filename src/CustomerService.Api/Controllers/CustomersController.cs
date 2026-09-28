@@ -57,7 +57,9 @@ public class CustomersController : ControllerBase
     [ProducesResponseType<ValidationProblemDetails>(
         StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(
-        StatusCodes.Status409Conflict)]        
+        StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status500InternalServerError)]
     public ActionResult<CustomerResponse> Create(
@@ -72,7 +74,7 @@ public class CustomersController : ControllerBase
             new { id = customer.Id },
             response);
     }
-    
+
     [HttpPut("{id:long}")]
     [ProducesResponseType<CustomerResponse>(
         StatusCodes.Status200OK)]
@@ -82,6 +84,8 @@ public class CustomersController : ControllerBase
         StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(
+        StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status500InternalServerError)]
     public ActionResult<CustomerResponse> Update(
@@ -118,14 +122,4 @@ public class CustomersController : ControllerBase
         return NoContent();
     }
 
-    #if DEBUG
-        [HttpGet("simulate-error")]
-        [ProducesResponseType<ProblemDetails>(
-            StatusCodes.Status500InternalServerError)]
-        public IActionResult SimulateUnexpectedError()
-        {
-            throw new InvalidOperationException(
-                "Simulated unexpected error.");
-        }
-    #endif
 }

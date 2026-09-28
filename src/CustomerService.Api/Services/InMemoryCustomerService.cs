@@ -1,12 +1,22 @@
 using CustomerService.Api.Contracts;
-using CustomerService.Api.Models;
-using CustomerService.Api.Mappings;
 using CustomerService.Api.Exceptions;
+using CustomerService.Api.Mappings;
+using CustomerService.Api.Models;
+using CustomerService.Api.Options;
+using Microsoft.Extensions.Options;
 
 namespace CustomerService.Api.Services;
 
 public class InMemoryCustomerService : ICustomerService
 {
+    private readonly CustomerPolicyOptions _customerPolicyOptions;
+
+    public InMemoryCustomerService(
+        IOptions<CustomerPolicyOptions> customerPolicyOptions)
+    {
+        _customerPolicyOptions = customerPolicyOptions.Value;
+    }
+
     private readonly List<Customer> _customers =
     [
         new Customer
@@ -33,6 +43,8 @@ public class InMemoryCustomerService : ICustomerService
 
     public Customer Create(CreateCustomerRequest request)
     {
+
+        EnsureMinimumAge(request.BirthDate);
 
         EnsureUnique(
             request.Email,
@@ -70,6 +82,8 @@ public class InMemoryCustomerService : ICustomerService
             return null;
         }
 
+        EnsureMinimumAge(request.BirthDate);
+
         EnsureUnique(
         request.Email,
         request.DocumentNumber,
@@ -89,6 +103,19 @@ public class InMemoryCustomerService : ICustomerService
         return customer is not null && _customers.Remove(customer);
     }
 
+    private void EnsureMinimumAge(DateOnly birthDate)
+    {
+        DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        DateOnly maximumAllowedBirthDate =
+            today.AddYears(-_customerPolicyOptions.MinimumAge);
+
+        if (birthDate > maximumAllowedBirthDate)
+        {
+            throw new CustomerMinimumAgeException(
+                _customerPolicyOptions.MinimumAge);
+        }
+    }
 
     private void EnsureUnique(
         string email,
