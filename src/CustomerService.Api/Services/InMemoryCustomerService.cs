@@ -60,9 +60,87 @@ public class InMemoryCustomerService : ICustomerService
         return customer;
     }
 
+    public Task<Customer> CreateAsync(
+        CreateCustomerRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Customer customer = Create(request);
+
+        return Task.FromResult(customer);
+    }
+
     public IReadOnlyCollection<Customer> GetAll()
     {
         return _customers.AsReadOnly();
+    }
+
+    public (IReadOnlyCollection<Customer> Items, int TotalCount) Search(
+        string? search,
+        int page,
+        int pageSize,
+        bool sortDescending)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(pageSize, 100);
+
+        IEnumerable<Customer> query = _customers;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            string term = search.Trim();
+
+            query = query.Where(customer =>
+                customer.FirstName.Contains(
+                    term, StringComparison.OrdinalIgnoreCase)
+                || customer.LastName.Contains(
+                    term, StringComparison.OrdinalIgnoreCase)
+                || customer.Email.Contains(
+                    term, StringComparison.OrdinalIgnoreCase));
+        }
+
+        int totalCount = query.Count();
+
+        IOrderedEnumerable<Customer> orderedQuery = sortDescending
+            ? query
+                .OrderByDescending(customer => customer.LastName)
+                .ThenByDescending(customer => customer.FirstName)
+                .ThenByDescending(customer => customer.Id)
+            : query
+                .OrderBy(customer => customer.LastName)
+                .ThenBy(customer => customer.FirstName)
+                .ThenBy(customer => customer.Id);
+
+        long offset = ((long)page - 1) * pageSize;
+
+        Customer[] items = offset >= totalCount
+            ? []
+            : orderedQuery
+                .Skip((int)offset)
+                .Take(pageSize)
+                .ToArray();
+
+        return (items, totalCount);
+    }
+
+    public Task<(IReadOnlyCollection<Customer> Items, int TotalCount)> SearchAsync(
+    string? search,
+    int page,
+    int pageSize,
+    bool sortDescending,
+    CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = Search(
+            search,
+            page,
+            pageSize,
+            sortDescending);
+
+        return Task.FromResult(result);
     }
 
     public Customer? GetById(long id)
@@ -71,13 +149,24 @@ public class InMemoryCustomerService : ICustomerService
             customer => customer.Id == id);
     }
 
+    public Task<Customer?> GetByIdAsync(
+    long id,
+    CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Customer? customer = GetById(id);
+
+        return Task.FromResult<Customer?>(customer);
+    }
+
+
     public Customer? Update(
         long id,
         UpdateCustomerRequest request)
     {
-        Customer? customer = GetById(id);
 
-        if (customer is null)
+        if (GetById(id) is not Customer customer)
         {
             return null;
         }
@@ -96,11 +185,35 @@ public class InMemoryCustomerService : ICustomerService
         return customer;
     }
 
+
+    public Task<Customer?> UpdateAsync(
+        long id,
+        UpdateCustomerRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Customer? customer = Update(id, request);
+
+        return Task.FromResult<Customer?>(customer);
+    }
+
     public bool Delete(long id)
     {
         Customer? customer = GetById(id);
 
         return customer is not null && _customers.Remove(customer);
+    }
+
+    public Task<bool> DeleteAsync(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        bool deleted = Delete(id);
+
+        return Task.FromResult(deleted);
     }
 
     private void EnsureMinimumAge(DateOnly birthDate)
@@ -123,8 +236,9 @@ public class InMemoryCustomerService : ICustomerService
         long? excludedCustomerId = null)
     {
         bool emailExists = _customers.Any(customer =>
-            (!excludedCustomerId.HasValue
-                || customer.Id != excludedCustomerId.Value)
+            (excludedCustomerId is not long idToExclude
+            || customer.Id != idToExclude)
+
             && string.Equals(
                 customer.Email.Trim(),
                 email.Trim(),

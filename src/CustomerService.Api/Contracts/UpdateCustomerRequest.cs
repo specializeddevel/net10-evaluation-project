@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CustomerService.Api.Contracts;
 
-public sealed record UpdateCustomerRequest
+public sealed record UpdateCustomerRequest : IValidatableObject
 {
     [Required(ErrorMessage = "First name is required.")]
     [StringLength(
@@ -33,4 +33,15 @@ public sealed record UpdateCustomerRequest
     public required string DocumentNumber { get; init; }
 
     public required DateOnly BirthDate { get; init; }
+
+    public IEnumerable<ValidationResult> Validate(
+    ValidationContext validationContext)
+    {
+        if (BirthDate == DateOnly.MinValue)
+        {
+            yield return new ValidationResult(
+                "Birth date must not be the default date.",
+                [nameof(BirthDate)]);
+        }
+    }
 }

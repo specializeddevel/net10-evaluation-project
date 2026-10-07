@@ -36,4 +36,16 @@ public sealed record CreateCustomerRequest(
         ErrorMessage = "Document number must contain between 5 and 30 characters.")]
     string DocumentNumber,
 
-    DateOnly BirthDate);
+    DateOnly BirthDate) : IValidatableObject
+    {
+        public IEnumerable<ValidationResult> Validate(
+            ValidationContext validationContext)
+        {
+            if (BirthDate == DateOnly.MinValue)
+            {
+                yield return new ValidationResult(
+                    "Birth date must not be the default date.",
+                    [nameof(BirthDate)]);
+            }
+        }
+    }

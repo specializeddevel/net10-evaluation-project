@@ -18,16 +18,32 @@ public class CustomersController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType<IReadOnlyCollection<CustomerResponse>>(
+    [ProducesResponseType<PagedResponse<CustomerResponse>>(
         StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(
+        StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status500InternalServerError)]
-    public ActionResult<IReadOnlyCollection<CustomerResponse>> GetAll()
+    public async Task<ActionResult<PagedResponse<CustomerResponse>>> GetAll(
+        [FromQuery] GetCustomersRequest request,
+        CancellationToken cancellationToken)
     {
-        CustomerResponse[] response = _customerService
-            .GetAll()
+        var result = await _customerService.SearchAsync(
+            request.Search,
+            request.Page,
+            request.PageSize,
+            request.SortDescending,
+            cancellationToken);
+
+        CustomerResponse[] items = result.Items
             .Select(customer => customer.ToResponse())
             .ToArray();
+
+        var response = new PagedResponse<CustomerResponse>(
+            items,
+            result.TotalCount,
+            request.Page,
+            request.PageSize);
 
         return Ok(response);
     }
@@ -39,9 +55,13 @@ public class CustomersController : ControllerBase
         StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status500InternalServerError)]
-    public ActionResult<CustomerResponse> GetById(long id)
+    public async Task<ActionResult<CustomerResponse>> GetById(
+    long id,
+    CancellationToken cancellationToken)
     {
-        var customer = _customerService.GetById(id);
+        Customer? customer = await _customerService.GetByIdAsync(
+            id,
+            cancellationToken);
 
         if (customer is null)
         {
@@ -62,10 +82,11 @@ public class CustomersController : ControllerBase
         StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status500InternalServerError)]
-    public ActionResult<CustomerResponse> Create(
-        CreateCustomerRequest request)
+    public async Task<ActionResult<CustomerResponse>> Create(
+        CreateCustomerRequest request,
+        CancellationToken cancellationToken)
     {
-        Customer customer = _customerService.Create(request);
+        Customer customer = await _customerService.CreateAsync(request, cancellationToken);
 
         CustomerResponse response = customer.ToResponse();
 
@@ -88,11 +109,12 @@ public class CustomersController : ControllerBase
         StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status500InternalServerError)]
-    public ActionResult<CustomerResponse> Update(
+    public async Task<ActionResult<CustomerResponse>> Update(
         long id,
-        UpdateCustomerRequest request)
+        UpdateCustomerRequest request,
+        CancellationToken cancellationToken)
     {
-        Customer? customer = _customerService.Update(id, request);
+        Customer? customer = await _customerService.UpdateAsync(id, request, cancellationToken);
 
         if (customer is null)
         {
@@ -110,9 +132,9 @@ public class CustomersController : ControllerBase
         StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(
         StatusCodes.Status500InternalServerError)]
-    public IActionResult Delete(long id)
+    public async Task<IActionResult> Delete(long id, CancellationToken cancellationToken)
     {
-        bool deleted = _customerService.Delete(id);
+        bool deleted = await _customerService.DeleteAsync(id, cancellationToken);
 
         if (!deleted)
         {

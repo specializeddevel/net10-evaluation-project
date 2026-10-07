@@ -1,0 +1,16 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: customer-service-sqlserver
+    hostname: customer-service-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}"
+    ports:
+      - "1433:1433"
+    volumes:
+      - customer-service-sql-data:/var/opt/mssql
+
+volumes:
+  customer-service-sql-data:
